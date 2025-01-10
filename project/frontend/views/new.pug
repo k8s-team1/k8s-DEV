@@ -3,19 +3,22 @@ form.form-inline(action="/post", method="POST")
         .input-group-prepend
             .input-group-text Title
         input#title.form-control(type="text", name="title", required="")
+
     .input-group.mb-2.mr-sm-2
         .input-group-prepend
             .input-group-text Artist
         input#artist.form-control(type="text", name="message", required="")
+
     .input-group.mb-2.mr-sm-2
         .input-group-prepend
             .input-group-text Length
         input#length.form-control(type="text", name="slength", required="")
+
     .input-group.mb-2.mr-sm-2
         .input-group-prepend
             .input-group-text Image
         input#image.form-control(type="text", name="image", placeholder="Enter image URL", required="")
-    
+
     button.btn.btn-primary.mb-2(type="submit") Pass to MongoDB
 
 h1#now-playing-status 🙄 Not Playing... 🙄
@@ -31,21 +34,43 @@ script.
     const player = document.getElementById('player');
     const statusElement = document.getElementById('now-playing-status');
 
+    // LocalStorage를 활용해 재생 상태 복원
+    window.addEventListener('DOMContentLoaded', () => {
+        const currentSong = localStorage.getItem('currentSong');
+        const currentTime = localStorage.getItem('currentTime');
+
+        if (currentSong) {
+            const savedData = JSON.parse(currentSong);
+            document.getElementById('now-playing-title').textContent = savedData.title || 'No Title';
+            document.getElementById('now-playing-artist').textContent = savedData.artist || 'No Artist';
+
+            const source = player.querySelector('source');
+            source.src = savedData.mp3Url || '';
+            player.load();
+
+            if (currentTime) {
+                player.currentTime = parseFloat(currentTime);
+            }
+        }
+    });
+
     player.addEventListener('play', () => {
         statusElement.textContent = '🔥 Now Playing... 🔥';
-    });                            
+    });
 
     player.addEventListener('pause', () => {
-        statusElement.textContent = '🤐 Paused...     🤐';
+        statusElement.textContent = '🤐 Paused... 🤐';
     });
 
     player.addEventListener('ended', () => {
         statusElement.textContent = '🙄 Not Playing... 🙄';
     });
 
+    // 현재 재생 위치를 저장
+    player.addEventListener('timeupdate', () => {
+        localStorage.setItem('currentTime', player.currentTime);
+    });
+
     window.addEventListener('beforeunload', () => {
-        const player = document.getElementById('player');
-        if (player) {
-            localStorage.setItem('currentTime', player.currentTime);
-        }
+        localStorage.setItem('currentTime', player.currentTime);
     });

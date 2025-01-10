@@ -18,18 +18,18 @@ html
                             label(for='dark-mode-toggle').text-light.mx-2 Mode
                             input#dark-mode-toggle(type='checkbox')
                 include new.pug
-        .container.posts.mt-0
+        .container.posts.mt-0#list-container
             include list.pug
 
         footer.fixed-bottom
             p.text-left.text-muted.footer-text Designed by Sushijin / Copyright.2024.AWS7th 'Team_Music Wave (3.1 / 4.1)'
 
 script.
-    function playSong(mp3Url, title, artist, imageUrl) {
-        console.log("Playing song with URL:", mp3Url); 
+    function playSong(mp3Url, title, artist, imageUrl, tracknum) {
+        console.log(`Playing song: Track ${tracknum}`);
         const player = document.getElementById('player');
         const source = player.querySelector('source');
-    
+
         source.src = mp3Url;
         player.load();
 
@@ -42,32 +42,30 @@ script.
         nowPlaying.style.backgroundSize = 'cover';
         nowPlaying.style.backgroundPosition = 'center';
 
-        // 저장된 재생 시간 복원
-        const savedSong = localStorage.getItem('currentSong');
-        if (savedSong) {
-            const savedData = JSON.parse(savedSong);
-            if (savedData.mp3Url === mp3Url) {
-                const savedTime = localStorage.getItem('currentTime');
-                if (savedTime) {
-                    player.currentTime = parseFloat(savedTime);
-                    console.log(`Resuming from ${savedTime} seconds`);
-                }
-            }
-        }
-
-        player.play();
-
-        // 현재 노래 정보 저장
-        const songData = { mp3Url, title, artist, imageUrl };
+        // 현재 노래 정보와 재생 위치 저장
+        const songData = { mp3Url, title, artist, imageUrl, tracknum, currentTime: 0 };
         localStorage.setItem('currentSong', JSON.stringify(songData));
 
-        // 재생 위치 저장
-        player.addEventListener('timeupdate', () => {
-            localStorage.setItem('currentTime', player.currentTime);
+        // 기존 재생 위치 복원
+        const savedSong = JSON.parse(localStorage.getItem('currentSong'));
+        if (savedSong && savedSong.mp3Url === mp3Url) {
+            player.currentTime = parseFloat(savedSong.currentTime || 0);
+            console.log(`Resuming from ${savedSong.currentTime || 0} seconds`);
+        }
+
+        // canplay 이벤트 발생 시 자동 재생
+        player.addEventListener('canplay', function handlePlay() {
+            try {
+                player.play();
+                console.log('Playback started.');
+            } catch (error) {
+                console.error('Playback blocked by browser policy:', error.message);
+            }
+            player.removeEventListener('canplay', handlePlay); // 이벤트 리스너 제거
         });
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const toggle = document.getElementById('dark-mode-toggle');
         const body = document.body;
 
@@ -87,11 +85,87 @@ script.
                 localStorage.setItem('darkMode', 'light');
             }
         });
+
+        // 현재 노래 정보 복원
+        const currentSong = JSON.parse(localStorage.getItem('currentSong'));
+        if (currentSong) {
+            // 텍스트 정보 복원
+            document.getElementById('now-playing-title').textContent = currentSong.title || 'No Title';
+            document.getElementById('now-playing-artist').textContent = currentSong.artist || 'No Artist';
+
+            // 배경 이미지 복원
+            const nowPlaying = document.querySelector('.now-playing');
+            nowPlaying.style.backgroundImage = `url('${currentSong.imageUrl}')`;
+            nowPlaying.style.backgroundSize = 'cover';
+            nowPlaying.style.backgroundPosition = 'center';
+
+            // 오디오 플레이어 복원
+            const player = document.getElementById('player');
+            const source = player.querySelector('source');
+            source.src = currentSong.mp3Url || '';
+            player.load();
+
+            // 재생 시간 복원
+            player.currentTime = parseFloat(currentSong.currentTime || 0);
+
+            // canplay 이벤트 발생 시 자동 재생
+            player.addEventListener('canplay', function handlePlay() {
+                try {
+                    player.play();
+                    console.log('Playback resumed automatically.');
+                } catch (error) {
+                    console.error('Playback blocked by browser policy:', error.message);
+                }
+                player.removeEventListener('canplay', handlePlay); // 이벤트 리스너 제거
+            });
+        }
     });
+
+    // F5 또는 Ctrl+R로 새로고침 방지 및 list-container 갱신
+    document.addEventListener('keydown', async (event) => {
+        if (event.key === 'F5' || (event.ctrlKey && event.key === 'r')) {
+            event.preventDefault();
+            try {
+                console.log('Refreshing list-container...');
+                const response = await fetch('/refresh-list');
+                if (response.ok) {
+                    const html = await response.text();
+                    document.getElementById('list-container').innerHTML = html;
+                    console.log('List-container refreshed.');
+                } else {
+                    console.error('Failed to fetch list:', response.statusText);
+                    window.location.reload(); // 실패 시 전체 새로고침
+                }
+            } catch (error) {
+                console.error('Error refreshing list:', error.message);
+                window.location.reload(); // 실패 시 전체 새로고침
+            }
+        }
+    });
+
+    // list-container를 갱신하는 함수
+    async function fetchListContainer() {
+        try {
+            const response = await fetch('/refresh-list');
+            if (response.ok) {
+                const html = await response.text();
+                const listContainer = document.getElementById('list-container');
+                listContainer.innerHTML = html; // list-container만 갱신
+            } else {
+                console.error('Failed to fetch list:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error refreshing list:', error.message);
+        }
+    }
 
     window.addEventListener('beforeunload', () => {
         const player = document.getElementById('player');
         if (player) {
-            localStorage.setItem('currentTime', player.currentTime);
+            const currentSong = JSON.parse(localStorage.getItem('currentSong'));
+            if (currentSong) {
+                currentSong.currentTime = player.currentTime; // 현재 곡의 재생 시간 저장
+                localStorage.setItem('currentSong', JSON.stringify(currentSong));
+            }
         }
     });

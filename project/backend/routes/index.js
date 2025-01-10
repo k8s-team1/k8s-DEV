@@ -11,7 +11,7 @@ router.get('/messages', (req, res) => {
 
     // 정렬관련 함수(시간값순으로 id생성하고, 정렬)
     try {
-        Message.messageModel.find({}, null, { sort: { '_id': -1 } }, (err, messages) => {
+        Message.messageModel.find({}, null, { sort: { 'views': -1 } }, (err, messages) => {
             let list = []
             if (messages.length > 0) {
                 messages.forEach((message) => {
@@ -40,6 +40,21 @@ router.post('/messages', (req, res) => {
             console.error('could not save: ' + err)
             res.status(500).json(err)
         }
+    }
+});
+
+//views 값 1 증가
+// PATCH 엔드포인트: tracknum 기준으로 views 값 증가
+router.patch('/messages/:tracknum', async (req, res) => {
+    const { tracknum } = req.params;
+    console.log(`received request: ${req.method} ${req.url}`)
+
+    try {
+        const updatedTrack = await Message.incrementViewsByTracknum(parseInt(tracknum));
+        res.json(updatedTrack);
+    } catch (error) {
+        console.error(error);
+        res.status(404).json({ message: error.message });
     }
 });
 

@@ -41,6 +41,28 @@ app.listen(PORT, () => {
   console.log('Press Ctrl+C to quit.');
 });
 
+// PATCH 요청: tracknum으로 조회 후 views 증가
+router.patch("/:tracknum", async (req, res) => {
+  const { tracknum } = req.params;
+
+  if (!tracknum) {
+    return res.status(400).send("tracknum is required");
+  }
+
+  try {
+    // 백엔드 API 호출
+    const response = await axios.patch(`${BACKEND_URI}/${tracknum}`);
+    console.log(`PATCH request successful for tracknum ${tracknum}:`, response.data);
+
+    // 성공적으로 업데이트된 데이터를 반환
+    res.json(response.data);
+  } catch (error) {
+    console.error(`Error in PATCH request for tracknum ${tracknum}:`, error.message);
+    res.status(500).send(`Error updating views for tracknum ${tracknum}: ${error.message}`);
+  }
+});
+
+
 // 백엔드로 부터 가져오는거
 router.get("/", (req, res) => {
    
@@ -53,6 +75,18 @@ router.get("/", (req, res) => {
         console.error('error: ' + error)
     })
 });
+
+router.get('/refresh-list', async (req, res) => {
+  try {
+      const response = await axios.get(BACKEND_URI); // 백엔드에서 데이터 가져오기
+      const result = util.formatMessages(response.data); // 메시지 데이터 포맷팅
+      res.render('list', { messages: result }); // list.pug 렌더링
+  } catch (error) {
+      console.error('Error fetching list:', error.message);
+      res.status(500).send('Error loading list');
+  }
+});
+
 
 //버튼눌러서 백엔드에 제출할 떄 쓰는 것
 router.post('/post', (req, res) => {

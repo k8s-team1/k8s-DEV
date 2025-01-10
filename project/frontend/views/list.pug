@@ -1,7 +1,7 @@
 if messages.length > 0
     for msg in messages
         // 카드에 Lazy Loading 적용
-        .card.my-3.col-12.lazy(onclick=`playSong('${msg.mp3}', '${msg.title}', '${msg.artist}', '${msg.image}')`, data-src-image=msg.image)
+        .card.my-3.col-12.lazy(onclick=`playSong('${msg.mp3}', '${msg.title}', '${msg.artist}', '${msg.image}', '${msg.tracknum}', '${msg.views}'); handleCardClick(${msg.tracknum});`, data-src-image=msg.image)
             .card-body.d-flex
                 // 이미지 로드 후 나타나게 함
                 img.img-box(src='', alt='image', class='lazy-img')
@@ -10,6 +10,7 @@ if messages.length > 0
                     h6.card-subtitle.mb-2.text-muted #{msg.slength}
                     p.card-text #{msg.artist}
                     h10.card-text #{msg.mp3}
+                    h6.card-subtitle.mb-2.text-muted played: #{msg.views}
 else
     p.alert.alert-info(role='alert')
         | There is currently no data in the guestbook.
@@ -46,3 +47,18 @@ script.
             });
         }
     });
+    
+    // PATCH API 호출 함수
+    async function handleCardClick(tracknum) {
+        try {
+            const response = await fetch(`/${tracknum}`, { method: 'PATCH' });
+            if (response.ok) {
+                const updatedData = await response.json();
+                console.log(`Views updated for tracknum ${tracknum}:`, updatedData);
+            } else {
+                console.error(`Failed to update views for tracknum ${tracknum}:`, response.statusText);
+            }
+        } catch (error) {
+            console.error(`Error during PATCH request for tracknum ${tracknum}:`, error.message);
+        }
+    }

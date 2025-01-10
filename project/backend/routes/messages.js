@@ -69,9 +69,29 @@ const create = (params) => {
     }
 }
 
+// PATCH 요청: tracknum으로 조회 후 views 증가
+const incrementViewsByTracknum = async (tracknum) => {
+    try {
+        const updatedMessage = await messageModel.findOneAndUpdate(
+            { tracknum: tracknum }, // tracknum 기준으로 조회
+            { $inc: { views: 1 } }, // views 값을 1 증가
+            { new: true }           // 업데이트된 문서 반환
+        );
+
+        if (!updatedMessage) {
+            throw new Error(`No message found with tracknum ${tracknum}`);
+        }
+
+        return updatedMessage;
+    } catch (error) {
+        throw error;
+    }
+};
+
 module.exports = {
     create: create,
     messageModel: messageModel,
-    connectToMongoDB: connectToMongoDB
+    connectToMongoDB: connectToMongoDB,
+    incrementViewsByTracknum: incrementViewsByTracknum
 }
 
